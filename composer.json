@@ -1,0 +1,22 @@
+{
+  "name": "egor-zvada/nextcloud-davc-ldap-provisioning",
+  "description": "LDAP provisioning companion for Nextcloud DAV Connector",
+  "type": "project",
+  "license": "AGPL-3.0-or-later",
+  "require": {
+    "php": ">=8.2 <8.6"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^11.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "OCA\\DAVCLdapProvisioning\\": "lib/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "OCA\\DAVCLdapProvisioning\\Tests\\": "tests/"
+    }
+  }
+}

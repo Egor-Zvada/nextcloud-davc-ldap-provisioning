@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+    <id>davc_ldap_provisioning</id>
+    <name>DAVC LDAP Provisioning</name>
+    <summary>Provision multiple DAV Connector accounts from LDAP attributes</summary>
+    <description><![CDATA[
+Companion app for Nextcloud DAV Connector. Administrators can create multiple
+independent Basic-auth DAV profiles for calendars, contacts, and separate accounts.
+Each profile reads its login and app password from configurable LDAP attributes and
+creates or updates the user's DAV Connector service without modifying DAV Connector.
+Users opt in to each profile independently only when both attributes contain values.
+
+The first release is intentionally conservative and supports Nextcloud 34 with
+DAV Connector 1.1.x only. Unknown DAV Connector versions fail closed.
+    ]]></description>
+    <version>0.2.0</version>
+    <namespace>DAVCLdapProvisioning</namespace>
+    <licence>AGPL-3.0-or-later</licence>
+    <author>Community prototype</author>
+    <category>integration</category>
+    <bugs>https://github.com/Egor-Zvada/nextcloud-davc-ldap-provisioning/issues</bugs>
+    <repository>https://github.com/Egor-Zvada/nextcloud-davc-ldap-provisioning</repository>
+    <dependencies>
+        <php min-version="8.2" max-version="8.5" min-int-size="64"/>
+        <nextcloud min-version="34" max-version="34"/>
+    </dependencies>
+    <commands>
+        <command>OCA\DAVCLdapProvisioning\Command\Provision</command>
+        <command>OCA\DAVCLdapProvisioning\Command\Status</command>
+        <command>OCA\DAVCLdapProvisioning\Command\ProfileList</command>
+        <command>OCA\DAVCLdapProvisioning\Command\ProfileSet</command>
+        <command>OCA\DAVCLdapProvisioning\Command\ProfileDelete</command>
+    </commands>
+    <background-jobs>
+        <job>OCA\DAVCLdapProvisioning\BackgroundJob\ProvisionJob</job>
+    </background-jobs>
+    <settings>
+        <admin>OCA\DAVCLdapProvisioning\Settings\AdminSettings</admin>
+    </settings>
+</info>

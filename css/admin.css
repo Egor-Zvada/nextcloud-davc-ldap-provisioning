@@ -1,0 +1,99 @@
+#davc-ldap-provisioning {
+    max-width: 980px;
+}
+
+#davc-ldap-provisioning input[type="text"],
+#davc-ldap-provisioning input[type="number"] {
+    width: min(420px, 100%);
+}
+
+#davc-ldap-provisioning .davc-ldap-status.ok {
+    font-weight: 600;
+    color: var(--color-success);
+}
+
+#davc-ldap-provisioning .davc-ldap-status.error {
+    font-weight: 600;
+    color: var(--color-error);
+}
+
+#davc-ldap-provisioning .davc-ldap-intro,
+#davc-ldap-provisioning .davc-ldap-opt-in,
+#davc-ldap-provisioning .davc-ldap-warning {
+    max-width: 820px;
+}
+
+#davc-ldap-provisioning .davc-ldap-opt-in,
+#davc-ldap-provisioning .davc-ldap-warning {
+    padding: 12px 14px;
+    border-left: 4px solid var(--color-primary-element);
+    background: var(--color-background-hover);
+}
+
+#davc-ldap-provisioning .davc-ldap-warning {
+    border-left-color: var(--color-warning);
+}
+
+#davc-ldap-provisioning .davc-ldap-global,
+#davc-ldap-provisioning .davc-ldap-profile {
+    margin: 18px 0;
+    padding: 18px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-large);
+    background: var(--color-main-background);
+}
+
+#davc-ldap-provisioning .davc-ldap-profile-header,
+#davc-ldap-provisioning .davc-ldap-profiles-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+#davc-ldap-provisioning .davc-ldap-profile-header h3,
+#davc-ldap-provisioning .davc-ldap-profiles-heading h3 {
+    margin: 0;
+}
+
+#davc-ldap-provisioning .davc-ldap-profile-header code {
+    display: inline-block;
+    margin-top: 4px;
+    color: var(--color-text-maxcontrast);
+}
+
+#davc-ldap-provisioning .davc-ldap-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 0 18px;
+}
+
+#davc-ldap-provisioning h4 {
+    margin-top: 20px;
+    margin-bottom: 4px;
+}
+
+#davc-ldap-provisioning .davc-ldap-help {
+    color: var(--color-text-maxcontrast);
+}
+
+#davc-ldap-provisioning .davc-ldap-actions {
+    margin-top: 22px;
+}
+
+#davc-ldap-provisioning .davc-ldap-hint {
+    margin-top: 28px;
+    line-height: 1.8;
+}
+
+#davc-ldap-save-status {
+    margin-left: 12px;
+}
+
+@media (max-width: 700px) {
+    #davc-ldap-provisioning .davc-ldap-profile-header,
+    #davc-ldap-provisioning .davc-ldap-profiles-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
