@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0
+
+- Add per-profile credential sources: LDAP attributes or one manually entered Basic-auth account.
+- Encrypt manually entered passwords with Nextcloud `ICrypto`; never return a stored password to the browser or CLI.
+- Add explicit per-profile targeting for all users, selected users, selected groups, or any combination of users and groups.
+- Remove the implicit current/test-user fallback: an untargeted profile does nothing.
+- Move background enablement and interval into each profile; a five-minute dispatcher runs only profiles that are due.
+- Resolve selected group membership at run time and deduplicate users selected both directly and through groups.
+- Add administrator-only user/group search to the settings page.
+- Make configuration cards collapsible and keep existing cards collapsed by default.
+- Keep upgraded 0.2.x profiles safe by disabling their new per-profile schedule and leaving their target list empty until an administrator chooses recipients.
+
 ## 0.2.0
 
 - Add up to 20 independent DAV profiles with separate LDAP attribute pairs and endpoints.

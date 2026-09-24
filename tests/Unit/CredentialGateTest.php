@@ -32,4 +32,11 @@ class CredentialGateTest extends TestCase {
             CredentialGate::accept(' user@example.test ', ' app-password '),
         );
     }
+
+    public function testManualPasswordCanPreserveSignificantWhitespace(): void {
+        self::assertSame(
+            ['login' => 'user@example.test', 'secret' => ' secret with spaces '],
+            CredentialGate::accept(' user@example.test ', ' secret with spaces ', false),
+        );
+    }
 }

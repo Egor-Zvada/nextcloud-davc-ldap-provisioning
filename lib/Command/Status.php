@@ -26,17 +26,20 @@ class Status extends Command {
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int {
-        $output->writeln('background_enabled: ' . ($this->config->isEnabled() ? 'yes' : 'no'));
-        $output->writeln('interval: ' . $this->config->interval());
-
         $rows = [];
         foreach ($this->config->profiles() as $profile) {
+            $target = $profile['target_all']
+                ? 'all'
+                : sprintf('%d users, %d groups', count($profile['target_users']), count($profile['target_groups']));
+            $source = $profile['credential_source'] === 'static'
+                ? 'manual:' . $profile['static_login']
+                : 'ldap:' . $profile['login_attribute'] . '/' . $profile['secret_attribute'];
             $rows[] = [
                 $profile['id'],
                 $profile['enabled'] ? 'yes' : 'no',
                 $profile['name'],
-                $profile['login_attribute'],
-                $profile['secret_attribute'],
+                $source,
+                $target,
                 sprintf(
                     '%s://%s:%d%s',
                     $profile['secure_transport'] ? 'https' : 'http',
@@ -44,12 +47,11 @@ class Status extends Command {
                     $profile['port'],
                     $profile['path'],
                 ),
-                $profile['auto_enable_calendars'] ? 'yes' : 'no',
-                $profile['auto_enable_contacts'] ? 'yes' : 'no',
+                $profile['background_enabled'] ? $profile['background_interval'] . 's' : 'off',
             ];
         }
         (new Table($output))
-            ->setHeaders(['ID', 'Enabled', 'Name', 'Login attribute', 'Secret attribute', 'DAV endpoint', 'Auto calendars', 'Auto contacts'])
+            ->setHeaders(['ID', 'Enabled', 'Name', 'Credentials', 'Targets', 'DAV endpoint', 'Schedule'])
             ->setRows($rows)
             ->render();
 

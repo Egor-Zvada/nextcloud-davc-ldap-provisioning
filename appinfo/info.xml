@@ -2,19 +2,19 @@
 <info xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
     <id>davc_ldap_provisioning</id>
-    <name>DAVC LDAP Provisioning</name>
-    <summary>Provision multiple DAV Connector accounts from LDAP attributes</summary>
+    <name>DAVC Provisioning</name>
+    <summary>Provision selected users with DAV Connector accounts from LDAP or encrypted manual credentials</summary>
     <description><![CDATA[
 Companion app for Nextcloud DAV Connector. Administrators can create multiple
 independent Basic-auth DAV profiles for calendars, contacts, and separate accounts.
-Each profile reads its login and app password from configurable LDAP attributes and
-creates or updates the user's DAV Connector service without modifying DAV Connector.
-Users opt in to each profile independently only when both attributes contain values.
+Each profile can read per-user credentials from configurable LDAP attributes or use
+one manually entered account encrypted with the Nextcloud server secret. Profiles
+target all users or explicit users and groups, and have independent schedules.
 
-The first release is intentionally conservative and supports Nextcloud 34 with
+This compatibility-gated release supports Nextcloud 34 with
 DAV Connector 1.1.x only. Unknown DAV Connector versions fail closed.
     ]]></description>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
     <namespace>DAVCLdapProvisioning</namespace>
     <licence>AGPL-3.0-or-later</licence>
     <author>Community prototype</author>

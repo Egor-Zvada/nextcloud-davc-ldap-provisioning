@@ -30,7 +30,7 @@ class AdminSettings implements ISettings {
             $compatibility = ['ok' => false, 'message' => $e->getMessage()];
         }
 
-        return new TemplateResponse('davc_ldap_provisioning', 'admin', [
+        return new TemplateResponse('davc_ldap_provisioning', 'admin_v3', [
             'config' => $this->config->all(),
             'compatibility' => $compatibility,
         ]);

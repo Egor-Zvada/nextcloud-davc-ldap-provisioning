@@ -15,14 +15,21 @@ class ProfileValidatorTest extends TestCase {
             'id' => 'ministry-calendar',
             'name' => 'Ministry calendar',
             'enabled' => true,
+            'credential_source' => 'ldap',
             'login_attribute' => 'msDS-cloudExtensionAttribute1',
             'secret_attribute' => 'msDS-cloudExtensionAttribute2',
+            'static_login' => '',
+            'target_all' => false,
+            'target_users' => ['alice'],
+            'target_groups' => [],
             'host' => 'caldav.example.org',
             'port' => 443,
             'path' => '/',
             'secure_transport' => true,
             'auto_enable_calendars' => false,
             'auto_enable_contacts' => false,
+            'background_enabled' => false,
+            'background_interval' => 1800,
         ];
     }
 
@@ -38,6 +45,32 @@ class ProfileValidatorTest extends TestCase {
         self::assertTrue($normalized['enabled']);
         self::assertTrue($normalized['auto_enable_contacts']);
         self::assertFalse($normalized['auto_enable_calendars']);
+    }
+
+    public function testManualCredentialsDoNotRequireLdapAttributes(): void {
+        $profile = $this->validProfile();
+        $profile['credential_source'] = 'static';
+        $profile['login_attribute'] = '';
+        $profile['secret_attribute'] = '';
+        $profile['static_login'] = 'calendar@example.test';
+        $profile['target_groups'] = ['calendar-users'];
+
+        $normalized = ProfileValidator::normalize($profile);
+
+        self::assertSame('static', $normalized['credential_source']);
+        self::assertSame('calendar@example.test', $normalized['static_login']);
+        self::assertSame(['alice'], $normalized['target_users']);
+        self::assertSame(['calendar-users'], $normalized['target_groups']);
+    }
+
+    public function testBackgroundRequiresAnExplicitTargetWhenNotAllUsers(): void {
+        $profile = $this->validProfile();
+        $profile['target_users'] = [];
+        $profile['target_groups'] = [];
+        $profile['background_enabled'] = true;
+
+        $this->expectException(\InvalidArgumentException::class);
+        ProfileValidator::normalize($profile);
     }
 
     /** @return array<string, array{0:string,1:mixed}> */

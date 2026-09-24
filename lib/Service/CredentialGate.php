@@ -5,18 +5,20 @@ declare(strict_types=1);
 namespace OCA\DAVCLdapProvisioning\Service;
 
 /**
- * Treat the two LDAP attributes as an explicit per-user opt-in switch.
- * Both values must be present before any DAV Connector operation is allowed.
+ * Validate a resolved LDAP or manually configured Basic-auth credential pair.
  */
 final class CredentialGate {
     /**
      * @return array{login:string,secret:string}|null
      */
-    public static function accept(?string $login, ?string $secret): ?array {
+    public static function accept(?string $login, ?string $secret, bool $trimSecret = true): ?array {
         $login = trim((string)$login);
-        $secret = trim((string)$secret);
+        $secret = (string)$secret;
+        if ($trimSecret) {
+            $secret = trim($secret);
+        }
 
-        if ($login === '' || $secret === '') {
+        if ($login === '' || trim($secret) === '') {
             return null;
         }
 

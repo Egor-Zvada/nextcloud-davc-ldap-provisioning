@@ -1,0 +1,246 @@
+#davc-provisioning {
+    max-width: 980px;
+}
+
+#davc-provisioning input[type="text"],
+#davc-provisioning input[type="password"],
+#davc-provisioning input[type="number"],
+#davc-provisioning select {
+    width: min(420px, 100%);
+}
+
+#davc-provisioning .davc-status.ok {
+    font-weight: 600;
+    color: var(--color-success);
+}
+
+#davc-provisioning .davc-status.error {
+    font-weight: 600;
+    color: var(--color-error);
+}
+
+#davc-provisioning .davc-intro,
+#davc-provisioning .davc-warning {
+    max-width: 820px;
+}
+
+#davc-provisioning .davc-warning {
+    padding: 12px 14px;
+    border-left: 4px solid var(--color-warning);
+    background: var(--color-background-hover);
+}
+
+#davc-provisioning .davc-profile {
+    margin: 12px 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-large);
+    background: var(--color-main-background);
+    overflow: visible;
+}
+
+#davc-provisioning .davc-profile-header {
+    border-radius: inherit;
+}
+
+#davc-provisioning .davc-profile-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+    min-height: 58px;
+    margin: 0;
+    padding: 12px 16px;
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
+    color: var(--color-main-text);
+    text-align: left;
+}
+
+#davc-provisioning .davc-profile-toggle:hover,
+#davc-provisioning .davc-profile-toggle:focus-visible {
+    background: var(--color-background-hover);
+}
+
+#davc-provisioning .davc-profile-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+#davc-provisioning .davc-profile-heading strong {
+    display: block;
+    overflow: hidden;
+    font-size: 16px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#davc-provisioning .davc-profile-heading code {
+    display: block;
+    margin-top: 2px;
+    color: var(--color-text-maxcontrast);
+}
+
+#davc-provisioning .davc-profile-chevron {
+    display: inline-block;
+    font-size: 24px;
+    line-height: 1;
+    transform: rotate(90deg);
+    transition: transform 120ms ease-in-out;
+}
+
+#davc-provisioning .davc-profile.is-collapsed .davc-profile-chevron {
+    transform: rotate(0deg);
+}
+
+#davc-provisioning .davc-profile.is-collapsed .davc-profile-heading code {
+    display: none;
+}
+
+#davc-provisioning .davc-profile-body {
+    padding: 0 18px 18px;
+    border-top: 1px solid var(--color-border);
+}
+
+#davc-provisioning .davc-profile-body[hidden] {
+    display: none;
+}
+
+#davc-provisioning .davc-profile-toolbar,
+#davc-provisioning .davc-profiles-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+#davc-provisioning .davc-profile-toolbar {
+    margin-top: 16px;
+}
+
+#davc-provisioning .davc-profiles-heading h3 {
+    margin: 0;
+}
+
+#davc-provisioning .davc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 0 18px;
+}
+
+#davc-provisioning h4 {
+    margin-top: 22px;
+    margin-bottom: 5px;
+}
+
+#davc-provisioning .davc-help {
+    color: var(--color-text-maxcontrast);
+}
+
+#davc-provisioning .davc-target-grid.is-disabled {
+    opacity: .55;
+    pointer-events: none;
+}
+
+#davc-provisioning .davc-principal-picker {
+    position: relative;
+    margin-top: 6px;
+    min-height: 42px;
+}
+
+#davc-provisioning .davc-principal-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+#davc-provisioning .davc-principal-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    padding: 4px 6px 4px 10px;
+    border-radius: 999px;
+    background: var(--color-background-dark);
+}
+
+#davc-provisioning .davc-principal-chip span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#davc-provisioning .davc-principal-chip button {
+    min-width: 26px;
+    min-height: 26px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    font-size: 18px;
+}
+
+#davc-provisioning .davc-principal-results {
+    position: absolute;
+    z-index: 100;
+    top: 100%;
+    left: 0;
+    width: min(420px, 100%);
+    max-height: 240px;
+    overflow-y: auto;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-large);
+    background: var(--color-main-background);
+    box-shadow: 0 4px 16px var(--color-box-shadow);
+}
+
+#davc-provisioning .davc-principal-results[hidden] {
+    display: none;
+}
+
+#davc-provisioning .davc-principal-result {
+    display: block;
+    width: 100%;
+    margin: 0;
+    padding: 9px 12px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--color-main-text);
+    text-align: left;
+}
+
+#davc-provisioning .davc-principal-result:hover,
+#davc-provisioning .davc-principal-result:focus-visible {
+    background: var(--color-background-hover);
+}
+
+#davc-provisioning .davc-actions {
+    margin-top: 22px;
+}
+
+#davc-provisioning .davc-hint {
+    margin-top: 28px;
+    line-height: 1.8;
+}
+
+#davc-save-status {
+    margin-left: 12px;
+}
+
+@media (max-width: 700px) {
+    #davc-provisioning .davc-profile-toolbar,
+    #davc-provisioning .davc-profiles-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    #davc-provisioning .davc-profile-toggle {
+        align-items: flex-start;
+    }
+}

@@ -9,5 +9,10 @@ return [
             'url' => '/settings',
             'verb' => 'POST',
         ],
+        [
+            'name' => 'settings#principals',
+            'url' => '/settings/principals',
+            'verb' => 'GET',
+        ],
     ],
 ];

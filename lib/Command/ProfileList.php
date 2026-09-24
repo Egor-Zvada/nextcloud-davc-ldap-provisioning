@@ -24,23 +24,26 @@ class ProfileList extends Command {
     protected function execute(InputInterface $input, OutputInterface $output): int {
         $rows = [];
         foreach ($this->config->profiles() as $profile) {
+            $credentials = $profile['credential_source'] === 'static'
+                ? 'manual:' . $profile['static_login']
+                : 'ldap:' . $profile['login_attribute'] . '/' . $profile['secret_attribute'];
+            $targets = $profile['target_all']
+                ? 'all'
+                : sprintf('%d users, %d groups', count($profile['target_users']), count($profile['target_groups']));
             $rows[] = [
                 $profile['id'],
                 $profile['enabled'] ? 'yes' : 'no',
                 $profile['name'],
-                $profile['login_attribute'],
-                $profile['secret_attribute'],
+                $credentials,
+                $targets,
                 $profile['host'],
                 $profile['port'],
-                $profile['path'],
-                $profile['secure_transport'] ? 'yes' : 'no',
-                $profile['auto_enable_calendars'] ? 'yes' : 'no',
-                $profile['auto_enable_contacts'] ? 'yes' : 'no',
+                $profile['background_enabled'] ? $profile['background_interval'] . 's' : 'off',
             ];
         }
 
         (new Table($output))
-            ->setHeaders(['ID', 'Enabled', 'Name', 'Login attr', 'Secret attr', 'Host', 'Port', 'Path', 'HTTPS', 'Auto cal', 'Auto contacts'])
+            ->setHeaders(['ID', 'Enabled', 'Name', 'Credentials', 'Targets', 'Host', 'Port', 'Schedule'])
             ->setRows($rows)
             ->render();
         return self::SUCCESS;

@@ -1,6 +1,6 @@
 {
   "name": "egor-zvada/nextcloud-davc-ldap-provisioning",
-  "description": "LDAP provisioning companion for Nextcloud DAV Connector",
+  "description": "Targeted LDAP and encrypted manual-credential provisioning companion for Nextcloud DAV Connector",
   "type": "project",
   "license": "AGPL-3.0-or-later",
   "require": {

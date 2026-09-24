@@ -19,9 +19,9 @@ class Provision extends Command {
     protected function configure(): void {
         $this
             ->setName('davc-ldap:provision')
-            ->setDescription('Provision DAV Connector services from LDAP attributes')
+            ->setDescription('Provision targeted DAV Connector services from LDAP or manual credentials')
             ->addArgument('user', InputArgument::OPTIONAL, 'Nextcloud user ID')
-            ->addOption('all', null, InputOption::VALUE_NONE, 'Provision all LDAP users')
+            ->addOption('all', null, InputOption::VALUE_NONE, 'Provision all users targeted by the selected profiles')
             ->addOption('profile', 'p', InputOption::VALUE_REQUIRED, 'Provision only the selected profile ID')
             ->addOption('dry-run', null, InputOption::VALUE_NONE, 'Resolve LDAP data and show the plan without modifying DAV Connector');
     }

@@ -1,8 +1,8 @@
-# DAVC LDAP Provisioning
+# DAVC Provisioning
 
 Companion app for **Nextcloud 34** and **DAV Connector 1.1.x**. It provisions
-multiple Basic-auth DAV accounts from LDAP attributes without modifying the
-official `integration_davc` app.
+multiple Basic-auth DAV accounts from LDAP attributes or encrypted manual
+credentials without modifying the official `integration_davc` app.
 
 The administration page uses Nextcloud localization: English is the source
 language and a complete Russian translation is included.
@@ -10,8 +10,14 @@ language and a complete Russian translation is included.
 ## What it does
 
 - Stores up to 20 independent DAV profiles.
-- Gives every profile its own name, LDAP login/secret attributes, DAV host,
-  port, path and HTTP/HTTPS setting.
+- Gives every profile its own name, credential source, DAV host, port, path,
+  recipients, schedule, and HTTP/HTTPS setting.
+- Supports either per-user LDAP login/secret attributes or one manually entered
+  login and password shared by that profile's selected Nextcloud users.
+- Encrypts manual passwords with Nextcloud's server secret and never returns a
+  stored password to the browser or CLI.
+- Targets all users, explicit users, explicit groups, or a combination of users
+  and groups. An empty target list has no implicit fallback and provisions nobody.
 - Supports CalDAV calendars, CardDAV address books, or both when the endpoint
   exposes both capabilities.
 - Treats both LDAP attributes as a per-user, per-profile opt-in. If either
@@ -20,8 +26,10 @@ language and a complete Russian translation is included.
   address books. These switches are independent.
 - Runs an immediate bounded harmonization after automatic collection
   selection, so newly selected collections are usable without an extra click.
-- Supports single-user, selected-profile, all-profile, dry-run, and all-user
-  operation through `occ`.
+- Supports single-user, selected-profile, targeted-profile, dry-run, and
+  all-target operation through `occ`.
+- Gives each profile its own background enable switch and interval; there is no
+  global background switch.
 - Leaves existing DAV services untouched when LDAP values or a profile are
   removed. Deprovisioning is always explicit.
 
@@ -41,6 +49,11 @@ A second external account should use a different attribute pair, for example
 Attribute names are not hard-coded. Forests with Exchange schema extensions can
 use `extensionAttribute1/2`; other installations can choose custom attributes.
 
+For a provider that has no suitable LDAP attributes, select **One manually
+entered account**. Enter its login and app password, then explicitly select the
+Nextcloud user(s) or group(s) that should receive it. Selecting several users
+shares the same external DAV account with all of them.
+
 ## Automatic collection selection
 
 New profiles default to both automatic switches being off:
@@ -57,15 +70,16 @@ calendar setting.
 
 ## Safety model
 
-- Background provisioning is disabled by default.
+- Every profile's background schedule is disabled by default.
 - Unknown DAV Connector versions fail closed.
 - No direct writes are made to DAV Connector database tables.
 - A replacement connection is validated before the old managed connection is
   removed.
 - If initial automatic collection setup fails, a newly created replacement is
   rolled back.
-- Secrets are never printed by this app. DAV Connector still stores the
-  Basic-auth credential in its normal service configuration.
+- Secrets are never printed by this app. Manual secrets are encrypted with
+  Nextcloud `ICrypto`; DAV Connector still stores the Basic-auth credential in
+  its normal service configuration after provisioning.
 - Plaintext LDAP attributes are only as private as their Active Directory ACL.
   Use app-specific passwords and restrict attribute read access where possible.
 
@@ -92,15 +106,16 @@ The UI is under:
 Administration settings → Additional settings → DAVC LDAP Provisioning
 ```
 
-Do not enable background provisioning until each profile has passed a
-single-user dry run.
+Do not enable a profile's schedule until it has passed a single-user dry run.
 
-## Upgrade from 0.1.x
+## Upgrade from 0.1.x or 0.2.x
 
-Version 0.2.0 reads the old single-profile app values as a virtual profile with
-ID `default`. It deliberately keeps the legacy `managed_service_id` user key,
-so the existing DAV service is adopted without reconnection. The profile list
-is persisted in the new JSON format the first time settings are saved.
+The old single-profile app values are read as a virtual profile with ID
+`default`. The legacy `managed_service_id` user key is retained, so an existing
+DAV service is adopted without reconnection. Version 0.3.0 does not silently
+target everyone during migration: every upgraded profile starts with an empty
+target list and its per-profile schedule off. Choose users/groups (or explicitly
+select all users) in the administration page before provisioning it again.
 
 Before upgrading, back up:
 
@@ -122,8 +137,10 @@ Create a contact profile:
 ```bash
 sudo -u www-data php occ davc-ldap:profile:set ministry-contacts \
   --name="Ministry contacts" \
+  --credential-source=ldap \
   --login-attribute=msDS-cloudExtensionAttribute1 \
   --secret-attribute=msDS-cloudExtensionAttribute2 \
+  --user=USER \
   --host=carddav.yandex.ru \
   --port=443 \
   --path=/ \
@@ -131,6 +148,11 @@ sudo -u www-data php occ davc-ldap:profile:set ministry-contacts \
   --auto-calendars=0 \
   --auto-contacts=1
 ```
+
+Manual credentials are best entered in the HTTPS administration page. For
+automation, the CLI also supports `--credential-source=static`,
+`--static-login`, and `--static-secret`; be aware that a command-line secret can
+remain in shell history.
 
 Update only one setting:
 
@@ -151,7 +173,7 @@ Test all active profiles for one user:
 sudo -u www-data php occ davc-ldap:provision USER --dry-run
 ```
 
-All users must only be processed after successful single-user tests:
+All configured targets must only be processed after successful single-user tests:
 
 ```bash
 sudo -u www-data php occ davc-ldap:provision --all --dry-run
@@ -174,9 +196,10 @@ filters or the username attribute.
 
 ## Background operation
 
-After single-user tests pass, enable background provisioning in the admin UI.
-Nextcloud cron must be configured normally. Every active profile is processed
-independently; one missing attribute pair does not affect other profiles.
+After a single-user test passes, enable the schedule inside that profile and set
+its interval (300-86400 seconds). Nextcloud cron must be configured normally. A
+five-minute dispatcher checks which profiles are due; each active profile is
+processed independently and only for its selected users/groups.
 
 ## Rollback
 

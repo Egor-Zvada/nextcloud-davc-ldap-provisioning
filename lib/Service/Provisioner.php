@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace OCA\DAVCLdapProvisioning\Service;
 
 use OCA\DAVCLdapProvisioning\Config\AppConfig;
+use OCA\DAVCLdapProvisioning\Config\ProfileValidator;
+use OCP\IGroupManager;
 use OCP\IUser;
 use OCP\IUserManager;
 use Psr\Log\LoggerInterface;
@@ -12,6 +14,7 @@ use Psr\Log\LoggerInterface;
 class Provisioner {
     public function __construct(
         private readonly IUserManager $userManager,
+        private readonly IGroupManager $groupManager,
         private readonly LdapResolver $ldapResolver,
         private readonly DavcAdapter $davc,
         private readonly AppConfig $config,
@@ -28,15 +31,6 @@ class Provisioner {
         $profileId = (string)$profile['id'];
         $profileName = (string)$profile['name'];
 
-        if ($user->getBackendClassName() !== 'LDAP') {
-            return [
-                'uid' => $uid,
-                'profile' => $profileId,
-                'profile_name' => $profileName,
-                'status' => 'skipped',
-                'reason' => 'not_ldap',
-            ];
-        }
         if (!(bool)$profile['enabled']) {
             return [
                 'uid' => $uid,
@@ -46,12 +40,41 @@ class Provisioner {
                 'reason' => 'profile_disabled',
             ];
         }
+        if (!$this->isUserTargeted($user, $profile)) {
+            return [
+                'uid' => $uid,
+                'profile' => $profileId,
+                'profile_name' => $profileName,
+                'status' => 'skipped',
+                'reason' => 'not_targeted',
+            ];
+        }
 
-        $credentials = $this->ldapResolver->resolve(
-            $user,
-            (string)$profile['login_attribute'],
-            (string)$profile['secret_attribute'],
-        );
+        $credentialSource = (string)($profile['credential_source'] ?? ProfileValidator::SOURCE_LDAP);
+        if ($credentialSource === ProfileValidator::SOURCE_STATIC) {
+            $credentials = CredentialGate::accept(
+                (string)$profile['static_login'],
+                $this->config->profileSecret($profileId),
+                false,
+            );
+            $missingReason = 'manual_credentials_missing';
+        } else {
+            if ($user->getBackendClassName() !== 'LDAP') {
+                return [
+                    'uid' => $uid,
+                    'profile' => $profileId,
+                    'profile_name' => $profileName,
+                    'status' => 'skipped',
+                    'reason' => 'not_ldap',
+                ];
+            }
+            $credentials = $this->ldapResolver->resolve(
+                $user,
+                (string)$profile['login_attribute'],
+                (string)$profile['secret_attribute'],
+            );
+            $missingReason = 'ldap_attributes_missing';
+        }
 
         if ($credentials === null) {
             return [
@@ -59,7 +82,7 @@ class Provisioner {
                 'profile' => $profileId,
                 'profile_name' => $profileName,
                 'status' => 'skipped',
-                'reason' => 'ldap_attributes_missing',
+                'reason' => $missingReason,
             ];
         }
 
@@ -222,15 +245,134 @@ class Provisioner {
     public function provisionAll(bool $dryRun = false, ?string $profileId = null): array {
         $summary = ['processed' => 0, 'ok' => 0, 'skipped' => 0, 'failed' => 0, 'results' => []];
 
-        $this->userManager->callForAllUsers(function (IUser $user) use (&$summary, $dryRun, $profileId): void {
-            $userSummary = $this->provisionUser($user, $dryRun, $profileId);
-            foreach (['processed', 'ok', 'skipped', 'failed'] as $key) {
-                $summary[$key] += $userSummary[$key];
+        if ($profileId !== null) {
+            $profile = $this->config->profile($profileId, true);
+            if ($profile === null) {
+                throw new \InvalidArgumentException('Profile not found: ' . $profileId);
             }
-            array_push($summary['results'], ...$userSummary['results']);
-        });
+            $profiles = [$profile];
+        } else {
+            $profiles = $this->config->profiles(false);
+        }
+
+        foreach ($profiles as $profile) {
+            $this->mergeSummary($summary, $this->provisionTargetsForProfile($profile, $dryRun));
+        }
 
         return $summary;
+    }
+
+    /**
+     * Provision exactly the users selected by one profile. Group membership is
+     * resolved at run time, so adding a user to a selected group takes effect
+     * without editing the profile.
+     *
+     * @param array<string, mixed> $profile
+     * @return array{processed:int,ok:int,skipped:int,failed:int,results:list<array<string,mixed>>}
+     */
+    public function provisionTargetsForProfile(array $profile, bool $dryRun = false): array {
+        $summary = ['processed' => 0, 'ok' => 0, 'skipped' => 0, 'failed' => 0, 'results' => []];
+
+        if ((bool)$profile['target_all']) {
+            $this->userManager->callForAllUsers(function (IUser $user) use (&$summary, $dryRun, $profile): void {
+                $this->provisionTargetUser($summary, $user, $profile, $dryRun);
+            });
+            return $summary;
+        }
+
+        /** @var array<string, IUser> $users */
+        $users = [];
+        foreach ($profile['target_users'] as $uid) {
+            $user = $this->userManager->get((string)$uid);
+            if ($user !== null) {
+                $users[$user->getUID()] = $user;
+            }
+        }
+        foreach ($profile['target_groups'] as $groupId) {
+            $group = $this->groupManager->get((string)$groupId);
+            if ($group === null) {
+                continue;
+            }
+            foreach ($group->getUsers() as $user) {
+                $users[$user->getUID()] = $user;
+            }
+        }
+
+        foreach ($users as $user) {
+            $this->provisionTargetUser($summary, $user, $profile, $dryRun);
+        }
+
+        return $summary;
+    }
+
+    /** @param array<string, mixed> $profile */
+    private function isUserTargeted(IUser $user, array $profile): bool {
+        if ((bool)($profile['target_all'] ?? false)) {
+            return true;
+        }
+        $uid = $user->getUID();
+        if (in_array($uid, $profile['target_users'] ?? [], true)) {
+            return true;
+        }
+        foreach ($profile['target_groups'] ?? [] as $groupId) {
+            if ($this->groupManager->isInGroup($uid, (string)$groupId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param array{processed:int,ok:int,skipped:int,failed:int,results:list<array<string,mixed>>} $summary
+     * @param array<string, mixed> $profile
+     */
+    private function provisionTargetUser(array &$summary, IUser $user, array $profile, bool $dryRun): void {
+        try {
+            $this->appendResult($summary, $this->provisionProfile($user, $profile, $dryRun));
+        } catch (\Throwable $e) {
+            $profileId = (string)$profile['id'];
+            $summary['processed']++;
+            $summary['failed']++;
+            $summary['results'][] = [
+                'uid' => $user->getUID(),
+                'profile' => $profileId,
+                'profile_name' => (string)$profile['name'],
+                'status' => 'failed',
+                'error' => $e->getMessage(),
+            ];
+            $this->config->recordResult($user->getUID(), $profileId, 'failed', $e->getMessage());
+            $this->logger->error('DAV provisioning failed for targeted user profile', [
+                'app' => 'davc_ldap_provisioning',
+                'uid' => $user->getUID(),
+                'profile' => $profileId,
+                'exception' => $e,
+            ]);
+        }
+    }
+
+    /**
+     * @param array{processed:int,ok:int,skipped:int,failed:int,results:list<array<string,mixed>>} $summary
+     * @param array<string, mixed> $result
+     */
+    private function appendResult(array &$summary, array $result): void {
+        $summary['processed']++;
+        $summary['results'][] = $result;
+        if (($result['status'] ?? '') === 'skipped') {
+            $summary['skipped']++;
+        } else {
+            $summary['ok']++;
+        }
+    }
+
+    /**
+     * @param array{processed:int,ok:int,skipped:int,failed:int,results:list<array<string,mixed>>} $target
+     * @param array{processed:int,ok:int,skipped:int,failed:int,results:list<array<string,mixed>>} $source
+     */
+    private function mergeSummary(array &$target, array $source): void {
+        foreach (['processed', 'ok', 'skipped', 'failed'] as $key) {
+            $target[$key] += $source[$key];
+        }
+        array_push($target['results'], ...$source['results']);
     }
 
     public function userById(string $uid): ?IUser {

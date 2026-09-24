@@ -6,6 +6,7 @@ namespace OCA\DAVCLdapProvisioning\Config;
 
 use OCA\DAVCLdapProvisioning\AppInfo\Application;
 use OCP\IConfig;
+use OCP\Security\ICrypto;
 
 class AppConfig {
     /**
@@ -21,8 +22,13 @@ class AppConfig {
     public const DEFAULT_PORT = 443;
     public const DEFAULT_PATH = '/';
     public const DEFAULT_INTERVAL = 1800;
+    private const PROFILE_SECRET_PREFIX = 'profile_secret_';
+    private const PROFILE_LAST_RUN_PREFIX = 'profile_last_run_';
 
-    public function __construct(private readonly IConfig $config) {
+    public function __construct(
+        private readonly IConfig $config,
+        private readonly ICrypto $crypto,
+    ) {
     }
 
     public function isEnabled(): bool {
@@ -38,14 +44,22 @@ class AppConfig {
      *     id:string,
      *     name:string,
      *     enabled:bool,
+     *     credential_source:string,
      *     login_attribute:string,
      *     secret_attribute:string,
+     *     static_login:string,
+     *     static_secret_set:bool,
+     *     target_all:bool,
+     *     target_users:list<string>,
+     *     target_groups:list<string>,
      *     host:string,
      *     port:int,
      *     path:string,
      *     secure_transport:bool,
      *     auto_enable_calendars:bool,
-     *     auto_enable_contacts:bool
+     *     auto_enable_contacts:bool,
+     *     background_enabled:bool,
+     *     background_interval:int
      * }>
      */
     public function profiles(bool $includeDisabled = true): array {
@@ -70,6 +84,11 @@ class AppConfig {
             }
         }
 
+        foreach ($profiles as &$profile) {
+            $profile['static_secret_set'] = $this->hasProfileSecret($profile['id']);
+        }
+        unset($profile);
+
         if ($includeDisabled) {
             return $profiles;
         }
@@ -92,6 +111,11 @@ class AppConfig {
             throw new \InvalidArgumentException('At most ' . ProfileValidator::MAX_PROFILES . ' profiles are allowed');
         }
 
+        $previousIds = array_map(
+            static fn(array $profile): string => (string)$profile['id'],
+            $this->profiles(),
+        );
+
         $normalized = [];
         $ids = [];
         foreach ($profiles as $profile) {
@@ -105,6 +129,17 @@ class AppConfig {
 
         $json = json_encode($normalized, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         $this->config->setAppValue(Application::APP_ID, self::PROFILES_KEY, $json);
+
+        $savedIds = array_fill_keys(array_map(
+            static fn(array $profile): string => (string)$profile['id'],
+            $normalized,
+        ), true);
+        foreach ($previousIds as $previousId) {
+            if (!isset($savedIds[$previousId])) {
+                $this->clearProfileSecret($previousId);
+                $this->config->deleteAppValue(Application::APP_ID, self::PROFILE_LAST_RUN_PREFIX . $previousId);
+            }
+        }
     }
 
     public function saveGlobal(bool $backgroundEnabled, int $interval): void {
@@ -113,6 +148,71 @@ class AppConfig {
         }
         $this->config->setAppValue(Application::APP_ID, self::BACKGROUND_ENABLED_KEY, $backgroundEnabled ? '1' : '0');
         $this->config->setAppValue(Application::APP_ID, 'interval', (string)$interval);
+    }
+
+    public function hasProfileSecret(string $profileId): bool {
+        return $this->config->getAppValue(
+            Application::APP_ID,
+            self::PROFILE_SECRET_PREFIX . $profileId,
+            '',
+        ) !== '';
+    }
+
+    public function profileSecret(string $profileId): ?string {
+        $ciphertext = $this->config->getAppValue(
+            Application::APP_ID,
+            self::PROFILE_SECRET_PREFIX . $profileId,
+            '',
+        );
+        if ($ciphertext === '') {
+            return null;
+        }
+
+        try {
+            return $this->crypto->decrypt($ciphertext);
+        } catch (\Throwable $e) {
+            throw new \RuntimeException('Stored manual password could not be decrypted', 0, $e);
+        }
+    }
+
+    public function saveProfileSecret(string $profileId, string $secret): void {
+        if (trim($secret) === '') {
+            throw new \InvalidArgumentException('Manual password is required');
+        }
+        if (strlen($secret) > 4096) {
+            throw new \InvalidArgumentException('Manual password is too long');
+        }
+        $this->config->setAppValue(
+            Application::APP_ID,
+            self::PROFILE_SECRET_PREFIX . $profileId,
+            $this->crypto->encrypt($secret),
+        );
+    }
+
+    public function clearProfileSecret(string $profileId): void {
+        $this->config->deleteAppValue(Application::APP_ID, self::PROFILE_SECRET_PREFIX . $profileId);
+    }
+
+    /** @param array<string, mixed> $profile */
+    public function isProfileDue(array $profile, ?int $now = null): bool {
+        if (!(bool)($profile['enabled'] ?? false) || !(bool)($profile['background_enabled'] ?? false)) {
+            return false;
+        }
+        $now ??= time();
+        $lastRun = (int)$this->config->getAppValue(
+            Application::APP_ID,
+            self::PROFILE_LAST_RUN_PREFIX . (string)$profile['id'],
+            '0',
+        );
+        return $lastRun <= 0 || ($now - $lastRun) >= (int)$profile['background_interval'];
+    }
+
+    public function markProfileBackgroundRun(string $profileId, ?int $timestamp = null): void {
+        $this->config->setAppValue(
+            Application::APP_ID,
+            self::PROFILE_LAST_RUN_PREFIX . $profileId,
+            (string)($timestamp ?? time()),
+        );
     }
 
     public function generateProfileId(): string {
@@ -125,8 +225,6 @@ class AppConfig {
     /** @return array<string, mixed> */
     public function all(): array {
         return [
-            'background_enabled' => $this->isEnabled(),
-            'interval' => $this->interval(),
             'profiles' => $this->profiles(),
         ];
     }
@@ -170,14 +268,23 @@ class AppConfig {
             'id' => 'default',
             'name' => $this->get('label', self::DEFAULT_LABEL),
             'enabled' => true,
+            'credential_source' => ProfileValidator::SOURCE_LDAP,
             'login_attribute' => $this->get('login_attribute', self::DEFAULT_LOGIN_ATTRIBUTE),
             'secret_attribute' => $this->get('secret_attribute', self::DEFAULT_SECRET_ATTRIBUTE),
+            'static_login' => '',
+            // Upgrades never opt all users into a new targeting model implicitly.
+            'target_all' => false,
+            'target_users' => [],
+            'target_groups' => [],
             'host' => $this->get('host', self::DEFAULT_HOST),
             'port' => max(1, min(65535, (int)$this->get('port', (string)self::DEFAULT_PORT))),
             'path' => $path,
             'secure_transport' => $this->getBool('secure_transport', true),
             'auto_enable_calendars' => $this->getBool('auto_enable_calendars', true),
             'auto_enable_contacts' => false,
+            // The old global switch is deliberately not migrated to avoid a mass run.
+            'background_enabled' => false,
+            'background_interval' => $this->interval(),
         ]);
     }
 
