@@ -9,7 +9,9 @@ $renderProfile = static function (array $profile) use ($l): void {
     $usersJson = json_encode($profile['target_users'], JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
     $groupsJson = json_encode($profile['target_groups'], JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
     ?>
-    <section class="davc-profile is-collapsed" data-profile-id="<?php p($profile['id']); ?>">
+    <section class="davc-profile is-collapsed"
+             data-profile-id="<?php p($profile['id']); ?>"
+             data-saved-enabled="<?php p($profile['enabled'] ? '1' : '0'); ?>">
         <div class="davc-profile-header">
             <button type="button" class="davc-profile-toggle" aria-expanded="false">
                 <span class="davc-profile-heading">
@@ -21,6 +23,10 @@ $renderProfile = static function (array $profile) use ($l): void {
                 </span>
                 <span data-role="toggle-label"><?php p($l->t('Expand')); ?></span>
             </button>
+            <div class="davc-profile-header-actions">
+                <span class="davc-profile-sync-status" data-role="sync-status" aria-live="polite"></span>
+                <button type="button" class="button davc-sync-profile"><?php p($l->t('Apply now')); ?></button>
+            </div>
         </div>
 
         <div class="davc-profile-body" hidden>
@@ -31,10 +37,12 @@ $renderProfile = static function (array $profile) use ($l): void {
                 </label>
                 <button type="button" class="button davc-remove-profile"><?php p($l->t('Remove configuration')); ?></button>
             </div>
+            <p class="davc-help"><?php p($l->t('Applying an enabled configuration connects its selected users. Applying a disabled configuration disconnects every DAV account managed by it. Remote calendars, address books, and their data are not deleted.')); ?></p>
 
             <p>
                 <label><?php p($l->t('Configuration and DAV service name')); ?></label><br>
                 <input data-field="name" type="text" maxlength="80" value="<?php p($profile['name']); ?>" required>
+                <br><span class="davc-help"><?php p($l->t('Connected collections are displayed as “configuration name: remote collection name”.')); ?></span>
             </p>
 
             <h4><?php p($l->t('Credentials')); ?></h4>

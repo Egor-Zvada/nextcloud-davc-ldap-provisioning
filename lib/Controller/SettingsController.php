@@ -6,6 +6,7 @@ namespace OCA\DAVCLdapProvisioning\Controller;
 
 use OCA\DAVCLdapProvisioning\Config\AppConfig;
 use OCA\DAVCLdapProvisioning\Config\ProfileValidator;
+use OCA\DAVCLdapProvisioning\Service\Provisioner;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http\DataResponse;
 use OCP\IGroupManager;
@@ -23,6 +24,7 @@ class SettingsController extends Controller {
         private readonly IUserManager $userManager,
         private readonly IGroupManager $groupManager,
         private readonly IL10N $l10n,
+        private readonly Provisioner $provisioner,
     ) {
         parent::__construct($appName, $request);
     }
@@ -48,6 +50,11 @@ class SettingsController extends Controller {
             return new DataResponse([
                 'error' => $this->l10n->t('At most %s profiles are allowed', [ProfileValidator::MAX_PROFILES]),
             ], 400);
+        }
+
+        $previousStates = [];
+        foreach ($this->config->profiles() as $previousProfile) {
+            $previousStates[(string)$previousProfile['id']] = (bool)$previousProfile['enabled'];
         }
 
         $normalized = [];
@@ -96,7 +103,45 @@ class SettingsController extends Controller {
             return new DataResponse(['error' => $this->l10n->t($e->getMessage())], 400);
         }
 
-        return new DataResponse(['ok' => true, 'config' => $this->config->all()]);
+        $stateChanges = [];
+        foreach ($normalized as $profile) {
+            $profileId = (string)$profile['id'];
+            if (array_key_exists($profileId, $previousStates)
+                && $previousStates[$profileId] !== (bool)$profile['enabled']) {
+                $stateChanges[] = $profileId;
+            }
+        }
+
+        return new DataResponse([
+            'ok' => true,
+            'config' => $this->config->all(),
+            'state_changes' => $stateChanges,
+        ]);
+    }
+
+    public function syncProfile(string $profileId): DataResponse {
+        $user = $this->userSession->getUser();
+        if ($user === null || !$this->groupManager->isAdmin($user->getUID())) {
+            return new DataResponse(['error' => $this->l10n->t('Admin privileges required')], 403);
+        }
+
+        $profile = $this->config->profile($profileId, true);
+        if ($profile === null) {
+            return new DataResponse(['error' => $this->l10n->t('Configuration not found')], 404);
+        }
+
+        try {
+            $summary = $this->provisioner->reconcileProfile($profile);
+            $this->config->markProfileBackgroundRun($profileId);
+        } catch (\Throwable $e) {
+            return new DataResponse(['error' => $e->getMessage()], 500);
+        }
+
+        return new DataResponse([
+            'ok' => $summary['failed'] === 0,
+            'mode' => $profile['enabled'] ? 'provision' : 'deprovision',
+            'summary' => $summary,
+        ]);
     }
 
     public function principals(string $query = ''): DataResponse {

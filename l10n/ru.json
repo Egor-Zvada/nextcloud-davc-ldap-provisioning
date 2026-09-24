@@ -93,7 +93,17 @@
     "Manual password is required": "Укажите пароль DAV-учётной записи",
     "Manual password is too long": "Пароль DAV-учётной записи слишком длинный",
     "Background interval must be between 300 and 86400 seconds": "Интервал фонового запуска должен быть от 300 до 86400 секунд",
-    "Select at least one user or group before enabling background provisioning": "Перед включением фонового режима выберите хотя бы одного пользователя или одну группу"
+    "Select at least one user or group before enabling background provisioning": "Перед включением фонового режима выберите хотя бы одного пользователя или одну группу",
+    "Apply now": "Применить сейчас",
+    "Applying an enabled configuration connects its selected users. Applying a disabled configuration disconnects every DAV account managed by it. Remote calendars, address books, and their data are not deleted.": "Применение включённой конфигурации подключает выбранных пользователей. Применение выключенной конфигурации отключает все управляемые ею DAV-учётные записи. Удалённые календари, адресные книги и данные в них не удаляются.",
+    "Connected collections are displayed as “configuration name: remote collection name”.": "Подключённые коллекции отображаются как «название конфигурации: название удалённой коллекции».",
+    "Correct the highlighted fields before saving": "Исправьте отмеченные поля перед сохранением",
+    "Applying…": "Применение…",
+    "Applying configuration…": "Конфигурация применяется…",
+    "Disconnected: {ok}; errors: {failed}": "Отключено: {ok}; ошибок: {failed}",
+    "Processed: {processed}; successful: {ok}; skipped: {skipped}; errors: {failed}": "Обработано: {processed}; успешно: {ok}; пропущено: {skipped}; ошибок: {failed}",
+    "Could not apply configuration: {message}": "Не удалось применить конфигурацию: {message}",
+    "Configuration not found": "Конфигурация не найдена"
   },
   "pluralForm": "nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);"
 }

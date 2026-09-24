@@ -26,12 +26,18 @@ language and a complete Russian translation is included.
   address books. These switches are independent.
 - Runs an immediate bounded harmonization after automatic collection
   selection, so newly selected collections are usable without an extra click.
+- Displays connected collections as `profile name: remote collection name`
+  instead of DAV Connector's default `DavC:` prefix. The remote collection is
+  not renamed.
+- Provides an **Apply now** button for each profile. It provisions an enabled
+  profile or disconnects every account managed by a disabled profile.
 - Supports single-user, selected-profile, targeted-profile, dry-run, and
   all-target operation through `occ`.
 - Gives each profile its own background enable switch and interval; there is no
   global background switch.
 - Leaves existing DAV services untouched when LDAP values or a profile are
-  removed. Deprovisioning is always explicit.
+  deleted. Disabling and applying a profile is the explicit, reversible
+  deprovisioning operation.
 
 ## Profile examples
 
@@ -67,6 +73,27 @@ New profiles default to both automatic switches being off:
 
 The profile migrated from version 0.1.x preserves its previous automatic
 calendar setting.
+
+## Collection names and immediate apply
+
+The profile name is also the local display-name prefix. For example, a profile
+named `Ministry` and a remote calendar named `Personal events` are displayed in
+Nextcloud as `Ministry: Personal events`. The same rule applies to connected
+address books. This only changes DAV Connector's local collection label; the
+external DAV server is not modified and the collection remains an external,
+non-shareable DAV Connector collection.
+
+Use **Apply now** on a profile card to reconcile it immediately without waiting
+for its schedule. Saving an enabled/disabled state change also applies that
+existing profile immediately:
+
+- enabled connects or updates the selected users and groups;
+- disabled disconnects all DAV Connector services previously managed by that
+  profile, including users later removed from its target list.
+
+Disconnecting removes DAV Connector's local cache and correlations. Remote
+calendars, address books, events, and contacts remain on the provider and are
+restored in Nextcloud when the profile is enabled and applied again.
 
 ## Safety model
 
@@ -167,6 +194,13 @@ sudo -u www-data php occ davc-ldap:provision USER --profile=ministry-contacts --
 sudo -u www-data php occ davc-ldap:provision USER --profile=ministry-contacts
 ```
 
+Apply the desired state of one whole profile immediately (connect if enabled,
+disconnect if disabled):
+
+```bash
+sudo -u www-data php occ davc-ldap:profile:apply ministry-contacts
+```
+
 Test all active profiles for one user:
 
 ```bash
@@ -216,7 +250,7 @@ application rollback.
 
 ## Current limitations
 
-- Version 0.2.0 accepts only Nextcloud 34 and DAV Connector 1.1.x.
+- Version 0.4.0 accepts only Nextcloud 34 and DAV Connector 1.1.x.
 - DAV Connector internal PHP services are used because 1.1.x has no public
   provisioning API.
 - Only Basic authentication is supported; OAuth-only providers are not.

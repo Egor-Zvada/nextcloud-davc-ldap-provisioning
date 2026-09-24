@@ -14,5 +14,10 @@ return [
             'url' => '/settings/principals',
             'verb' => 'GET',
         ],
+        [
+            'name' => 'settings#syncProfile',
+            'url' => '/settings/profiles/{profileId}/sync',
+            'verb' => 'POST',
+        ],
     ],
 ];

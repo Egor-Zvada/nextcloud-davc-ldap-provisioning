@@ -199,6 +199,16 @@
                     card.remove();
                 }
             });
+            card.querySelector('.davc-sync-profile').addEventListener('click', async function () {
+                try {
+                    const saved = await saveSettings();
+                    const profileIds = new Set(saved.state_changes || []);
+                    profileIds.add(card.dataset.profileId);
+                    await applyProfiles(profileIds);
+                } catch (error) {
+                    // saveSettings/applyProfile already rendered a useful error.
+                }
+            });
             card.querySelectorAll('.davc-principal-picker').forEach(bindPicker);
             updateProfileHeading(card);
             updateCredentialSource(card);
@@ -210,6 +220,7 @@
             const fragment = template.content.cloneNode(true);
             const card = fragment.querySelector('.davc-profile');
             card.dataset.profileId = profile.id || '';
+            card.dataset.savedEnabled = profile.id ? (profile.enabled === false ? '0' : '1') : '';
             field(card, 'name').value = profile.name || '';
             field(card, 'enabled').checked = profile.enabled !== false;
             field(card, 'credential_source').value = profile.credential_source || 'static';
@@ -257,6 +268,144 @@
             };
         }
 
+        function setSyncStatus(card, message, isError) {
+            const syncStatus = card.querySelector('[data-role="sync-status"]');
+            syncStatus.textContent = message;
+            syncStatus.classList.toggle('error', isError === true);
+            syncStatus.title = message;
+        }
+
+        function ensureValidForm() {
+            if (form.checkValidity()) {
+                return true;
+            }
+            const invalid = form.querySelector(':invalid');
+            if (invalid) {
+                const card = invalid.closest('.davc-profile');
+                if (card) {
+                    setCollapsed(card, false);
+                }
+            }
+            form.reportValidity();
+            return false;
+        }
+
+        async function saveSettings() {
+            if (!ensureValidForm()) {
+                throw new Error(t(appId, 'Correct the highlighted fields before saving'));
+            }
+
+            status.textContent = t(appId, 'Saving…');
+            const profileCards = Array.from(profilesContainer.querySelectorAll('.davc-profile'));
+            const data = new URLSearchParams();
+            data.set('profiles', JSON.stringify(profileCards.map(readCard)));
+
+            try {
+                const response = await fetch(OC.generateUrl('/apps/davc_ldap_provisioning/settings'), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                        'requesttoken': OC.requestToken,
+                    },
+                    body: data.toString(),
+                });
+                const body = await response.json();
+                if (!response.ok || body.error) {
+                    throw new Error(body.error || ('HTTP ' + response.status));
+                }
+
+                profileCards.forEach(function (card, index) {
+                    const saved = body.config.profiles[index];
+                    if (!saved) {
+                        return;
+                    }
+                    card.dataset.profileId = saved.id;
+                    card.dataset.savedEnabled = saved.enabled ? '1' : '0';
+                    const secret = field(card, 'static_secret');
+                    secret.value = '';
+                    secret.dataset.secretSet = saved.static_secret_set ? '1' : '0';
+                    secret.placeholder = saved.static_secret_set
+                        ? t(appId, 'Password saved — leave blank to keep it')
+                        : t(appId, 'Enter password');
+                    updateCredentialSource(card);
+                    updateProfileHeading(card);
+                });
+                status.textContent = t(appId, 'Saved');
+                notify(t(appId, 'DAVC Provisioning settings saved'));
+                return body;
+            } catch (error) {
+                status.textContent = t(appId, 'Error: {message}', {message: error.message});
+                notify(t(appId, 'Could not save DAVC Provisioning settings'));
+                throw error;
+            }
+        }
+
+        async function applyProfile(card) {
+            const button = card.querySelector('.davc-sync-profile');
+            const profileId = card.dataset.profileId;
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = t(appId, 'Applying…');
+            setSyncStatus(card, t(appId, 'Applying configuration…'), false);
+
+            try {
+                const response = await fetch(OC.generateUrl(
+                    '/apps/davc_ldap_provisioning/settings/profiles/{profileId}/sync',
+                    {profileId: profileId},
+                ), {
+                    method: 'POST',
+                    headers: {requesttoken: OC.requestToken},
+                });
+                const body = await response.json();
+                if (!response.ok || body.error) {
+                    throw new Error(body.error || ('HTTP ' + response.status));
+                }
+
+                const summary = body.summary || {};
+                const message = body.mode === 'deprovision'
+                    ? t(appId, 'Disconnected: {ok}; errors: {failed}', {
+                        ok: Number(summary.ok || 0),
+                        failed: Number(summary.failed || 0),
+                    })
+                    : t(appId, 'Processed: {processed}; successful: {ok}; skipped: {skipped}; errors: {failed}', {
+                        processed: Number(summary.processed || 0),
+                        ok: Number(summary.ok || 0),
+                        skipped: Number(summary.skipped || 0),
+                        failed: Number(summary.failed || 0),
+                    });
+                const hasErrors = Number(summary.failed || 0) > 0;
+                setSyncStatus(card, message, hasErrors);
+                notify(message);
+                return body;
+            } catch (error) {
+                const message = t(appId, 'Could not apply configuration: {message}', {message: error.message});
+                setSyncStatus(card, message, true);
+                notify(message);
+                throw error;
+            } finally {
+                button.disabled = false;
+                button.textContent = originalText;
+            }
+        }
+
+        async function applyProfiles(profileIds) {
+            for (const profileId of profileIds) {
+                if (!profileId) {
+                    continue;
+                }
+                const card = Array.from(profilesContainer.querySelectorAll('.davc-profile')).find(function (candidate) {
+                    return candidate.dataset.profileId === profileId;
+                });
+                if (card) {
+                    try {
+                        await applyProfile(card);
+                    } catch (error) {
+                        // Continue applying other explicitly changed profiles.
+                    }
+                }
+            }
+        }
+
         profilesContainer.querySelectorAll('.davc-profile').forEach(bindCard);
 
         addButton.addEventListener('click', function () {
@@ -284,46 +433,11 @@
 
         form.addEventListener('submit', async function (event) {
             event.preventDefault();
-            status.textContent = t(appId, 'Saving…');
-
-            const profileCards = Array.from(profilesContainer.querySelectorAll('.davc-profile'));
-            const data = new URLSearchParams();
-            data.set('profiles', JSON.stringify(profileCards.map(readCard)));
-
             try {
-                const response = await fetch(OC.generateUrl('/apps/davc_ldap_provisioning/settings'), {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-                        'requesttoken': OC.requestToken,
-                    },
-                    body: data.toString(),
-                });
-                const body = await response.json();
-                if (!response.ok || body.error) {
-                    throw new Error(body.error || ('HTTP ' + response.status));
-                }
-
-                profileCards.forEach(function (card, index) {
-                    const saved = body.config.profiles[index];
-                    if (!saved) {
-                        return;
-                    }
-                    card.dataset.profileId = saved.id;
-                    const secret = field(card, 'static_secret');
-                    secret.value = '';
-                    secret.dataset.secretSet = saved.static_secret_set ? '1' : '0';
-                    secret.placeholder = saved.static_secret_set
-                        ? t(appId, 'Password saved — leave blank to keep it')
-                        : t(appId, 'Enter password');
-                    updateCredentialSource(card);
-                    updateProfileHeading(card);
-                });
-                status.textContent = t(appId, 'Saved');
-                notify(t(appId, 'DAVC Provisioning settings saved'));
+                const saved = await saveSettings();
+                await applyProfiles(new Set(saved.state_changes || []));
             } catch (error) {
-                status.textContent = t(appId, 'Error: {message}', {message: error.message});
-                notify(t(appId, 'Could not save DAVC Provisioning settings'));
+                // saveSettings already rendered the validation or request error.
             }
         });
     });

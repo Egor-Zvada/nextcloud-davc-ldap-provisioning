@@ -18,7 +18,14 @@ OC.L10N.register(
         "Could not save DAVC Provisioning settings": "Не удалось сохранить настройки автоподключения DAVC",
         "DAVC LDAP Provisioning settings saved": "Настройки автоподключения DAVC сохранены",
         "Error: {message}": "Ошибка: {message}",
-        "Could not save DAVC LDAP Provisioning settings": "Не удалось сохранить настройки автоподключения DAVC"
+        "Could not save DAVC LDAP Provisioning settings": "Не удалось сохранить настройки автоподключения DAVC",
+        "Apply now": "Применить сейчас",
+        "Correct the highlighted fields before saving": "Исправьте отмеченные поля перед сохранением",
+        "Applying…": "Применение…",
+        "Applying configuration…": "Конфигурация применяется…",
+        "Disconnected: {ok}; errors: {failed}": "Отключено: {ok}; ошибок: {failed}",
+        "Processed: {processed}; successful: {ok}; skipped: {skipped}; errors: {failed}": "Обработано: {processed}; успешно: {ok}; пропущено: {skipped}; ошибок: {failed}",
+        "Could not apply configuration: {message}": "Не удалось применить конфигурацию: {message}"
     },
     "nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);"
 );

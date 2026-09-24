@@ -126,6 +126,10 @@ class Provisioner {
             'calendars' => ['enabled' => 0, 'total' => 0],
             'contacts' => ['enabled' => 0, 'total' => 0],
         ];
+        $labelResult = [
+            'calendars' => ['updated' => 0, 'total' => 0],
+            'contacts' => ['updated' => 0, 'total' => 0],
+        ];
 
         try {
             $collectionResult = $this->davc->enableCollections(
@@ -173,14 +177,33 @@ class Provisioner {
             throw $e;
         }
 
+        // Collection display names are cosmetic. A naming failure must not
+        // roll back an otherwise healthy external DAV connection.
+        try {
+            $labelResult = $this->davc->applyCollectionLabels(
+                $uid,
+                (int)$service['sid'],
+                $profileName,
+            );
+        } catch (\Throwable $e) {
+            $this->logger->warning('DAV collections were connected but their display names could not be updated', [
+                'app' => 'davc_ldap_provisioning',
+                'uid' => $uid,
+                'profile' => $profileId,
+                'exception' => $e,
+            ]);
+        }
+
         $message = sprintf(
-            'DAV service %s (sid=%d), calendars enabled=%d/%d, contacts enabled=%d/%d',
+            'DAV service %s (sid=%d), calendars enabled=%d/%d renamed=%d, contacts enabled=%d/%d renamed=%d',
             $service['action'],
             $service['sid'],
             $collectionResult['calendars']['enabled'],
             $collectionResult['calendars']['total'],
+            $labelResult['calendars']['updated'],
             $collectionResult['contacts']['enabled'],
             $collectionResult['contacts']['total'],
+            $labelResult['contacts']['updated'],
         );
         $this->config->recordResult($uid, $profileId, 'ok', $message);
 
@@ -193,6 +216,7 @@ class Provisioner {
             'sid' => $service['sid'],
             'calendars' => $collectionResult['calendars'],
             'contacts' => $collectionResult['contacts'],
+            'labels' => $labelResult,
         ];
     }
 
@@ -258,6 +282,69 @@ class Provisioner {
         foreach ($profiles as $profile) {
             $this->mergeSummary($summary, $this->provisionTargetsForProfile($profile, $dryRun));
         }
+
+        return $summary;
+    }
+
+    /**
+     * Apply a profile's desired state immediately. Enabled profiles provision
+     * their current targets; disabled profiles disconnect every DAV service
+     * previously managed by that profile, including users removed from its
+     * current target list.
+     *
+     * @param array<string, mixed> $profile
+     * @return array{processed:int,ok:int,skipped:int,failed:int,results:list<array<string,mixed>>}
+     */
+    public function reconcileProfile(array $profile): array {
+        if ((bool)($profile['enabled'] ?? false)) {
+            return $this->provisionTargetsForProfile($profile, false);
+        }
+        return $this->deprovisionProfile((string)$profile['id'], (string)$profile['name']);
+    }
+
+    /**
+     * @return array{processed:int,ok:int,skipped:int,failed:int,results:list<array<string,mixed>>}
+     */
+    public function deprovisionProfile(string $profileId, string $profileName = ''): array {
+        $summary = ['processed' => 0, 'ok' => 0, 'skipped' => 0, 'failed' => 0, 'results' => []];
+
+        $this->userManager->callForAllUsers(function (IUser $user) use (&$summary, $profileId, $profileName): void {
+            $uid = $user->getUID();
+            if ($this->config->managedServiceId($uid, $profileId) === null) {
+                return;
+            }
+
+            $summary['processed']++;
+            try {
+                $disconnection = $this->davc->disconnectManagedService($profileId, $uid);
+                $summary['ok']++;
+                $summary['results'][] = [
+                    'uid' => $uid,
+                    'profile' => $profileId,
+                    'profile_name' => $profileName !== '' ? $profileName : $profileId,
+                    'status' => 'ok',
+                    'action' => $disconnection['action'],
+                    'sid' => $disconnection['sid'] ?? null,
+                ];
+                $this->config->recordResult($uid, $profileId, 'disabled', (string)$disconnection['action']);
+            } catch (\Throwable $e) {
+                $summary['failed']++;
+                $summary['results'][] = [
+                    'uid' => $uid,
+                    'profile' => $profileId,
+                    'profile_name' => $profileName !== '' ? $profileName : $profileId,
+                    'status' => 'failed',
+                    'error' => $e->getMessage(),
+                ];
+                $this->config->recordResult($uid, $profileId, 'failed', $e->getMessage());
+                $this->logger->error('Managed DAV service could not be disconnected for disabled profile', [
+                    'app' => 'davc_ldap_provisioning',
+                    'uid' => $uid,
+                    'profile' => $profileId,
+                    'exception' => $e,
+                ]);
+            }
+        });
 
         return $summary;
     }

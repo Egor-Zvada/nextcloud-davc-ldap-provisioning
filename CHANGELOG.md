@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0
+
+- Replace DAV Connector's `DavC:` collection prefix with the profile name while preserving the remote calendar or address-book name.
+- Reapply managed collection names on provisioning without renaming anything on the remote DAV server.
+- Add an administrator-only **Apply now** action to every configuration card.
+- Make immediate apply reconcile the desired state: enabled profiles connect their targets, while disabled profiles disconnect every DAV service managed by that profile.
+- Apply an existing profile automatically when its enabled state is changed and the settings form is saved.
+- Keep disablement reversible: disconnecting removes DAV Connector's local account, cache, and correlations, but never deletes remote calendars, address books, events, or contacts.
+- Add `occ davc-ldap:profile:apply PROFILE_ID` with the same connect/disconnect semantics as the administration button.
+
 ## 0.3.0
 
 - Add per-profile credential sources: LDAP attributes or one manually entered Basic-auth account.

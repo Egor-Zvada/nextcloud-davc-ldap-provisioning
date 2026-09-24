@@ -27,4 +27,30 @@ class DavcVersionPolicyTest extends TestCase {
         self::assertSame('/caldav', $method->invoke(null, 'caldav'));
         self::assertSame('/caldav', $method->invoke(null, '//caldav'));
     }
+
+    public function testCollectionDisplayNameUsesProfileAsPrefix(): void {
+        $method = new \ReflectionMethod(DavcAdapter::class, 'formatCollectionLabel');
+
+        self::assertSame(
+            'Ministry: Personal events',
+            $method->invoke(null, 'Ministry', 'Personal events', 'Calendar'),
+        );
+        self::assertSame(
+            'Ministry: Calendar',
+            $method->invoke(null, 'Ministry', '', 'Calendar'),
+        );
+    }
+
+    public function testConnectorDiscoveryMarkerIsNotPartOfRemoteName(): void {
+        $method = new \ReflectionMethod(DavcAdapter::class, 'remoteCollectionNames');
+        $names = $method->invoke(null, [
+            ['id' => '/calendars/personal/', 'label' => 'Personal - Personal events'],
+            ['id' => '/calendars/team/', 'label' => 'Personal - Team'],
+        ]);
+
+        self::assertSame([
+            '/calendars/personal/' => 'Personal events',
+            '/calendars/team/' => 'Team',
+        ], $names);
+    }
 }

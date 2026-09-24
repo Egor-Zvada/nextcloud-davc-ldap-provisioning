@@ -19,6 +19,7 @@ class DavcAdapter {
     private ?object $core = null;
     private ?object $services = null;
     private ?object $harmonization = null;
+    private ?object $localFactory = null;
 
     public function __construct(
         private readonly IAppManager $appManager,
@@ -149,6 +150,36 @@ class DavcAdapter {
     }
 
     /**
+     * Disconnect only a service previously adopted or created for this profile.
+     * Remote DAV data is never deleted; DAV Connector removes its local cache,
+     * collection correlations, and scheduled harmonization task.
+     *
+     * @return array{action:string,sid?:int}
+     */
+    public function disconnectManagedService(string $profileId, string $uid): array {
+        $sid = $this->appConfig->managedServiceId($uid, $profileId);
+        if ($sid === null) {
+            return ['action' => 'absent'];
+        }
+
+        $this->assertCompatible();
+        try {
+            $service = $this->services->fetchByUserIdAndServiceId($uid, $sid);
+        } catch (\Throwable) {
+            $this->appConfig->clearManagedServiceId($uid, $profileId);
+            return ['action' => 'already_absent', 'sid' => $sid];
+        }
+        if ($service === null) {
+            $this->appConfig->clearManagedServiceId($uid, $profileId);
+            return ['action' => 'already_absent', 'sid' => $sid];
+        }
+
+        $this->core->disconnectAccount($uid, $sid);
+        $this->appConfig->clearManagedServiceId($uid, $profileId);
+        return ['action' => 'disconnected', 'sid' => $sid];
+    }
+
+    /**
      * @return array{
      *     calendars:array{enabled:int,total:int},
      *     contacts:array{enabled:int,total:int}
@@ -198,6 +229,63 @@ class DavcAdapter {
 
         if ($contactEnable !== [] || $eventEnable !== []) {
             $this->core->localCollectionsDeposit($uid, $sid, $contactEnable, $eventEnable);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Replace DAV Connector's `DavC:` prefix with the profile name while
+     * preserving the remote collection name. This changes only the local DAV
+     * display name exposed to Nextcloud; it never renames a remote collection.
+     *
+     * @return array{
+     *     calendars:array{updated:int,total:int},
+     *     contacts:array{updated:int,total:int}
+     * }
+     */
+    public function applyCollectionLabels(string $uid, int $sid, string $profileName): array {
+        $this->assertCompatible();
+
+        $remote = $this->core->remoteCollectionsFetch($uid, $sid);
+        $local = $this->core->localCollectionsFetch($uid, $sid);
+        $eventNames = self::remoteCollectionNames($remote['EventsCollections'] ?? []);
+        $contactNames = self::remoteCollectionNames($remote['ContactsCollections'] ?? []);
+        $eventCollections = $local['EventCollections'] ?? [];
+        $contactCollections = $local['ContactCollections'] ?? [];
+        $result = [
+            'calendars' => ['updated' => 0, 'total' => count($eventCollections)],
+            'contacts' => ['updated' => 0, 'total' => count($contactCollections)],
+        ];
+
+        $eventStore = $this->localFactory->eventsStore();
+        foreach ($eventCollections as $collection) {
+            $remoteId = (string)$collection->getCcid();
+            if (!isset($eventNames[$remoteId])) {
+                continue;
+            }
+            $label = self::formatCollectionLabel($profileName, $eventNames[$remoteId], 'Calendar');
+            if ((string)$collection->getLabel() === $label) {
+                continue;
+            }
+            $collection->setLabel($label);
+            $eventStore->collectionModify($collection);
+            $result['calendars']['updated']++;
+        }
+
+        $contactStore = $this->localFactory->contactsStore();
+        foreach ($contactCollections as $collection) {
+            $remoteId = (string)$collection->getCcid();
+            if (!isset($contactNames[$remoteId])) {
+                continue;
+            }
+            $label = self::formatCollectionLabel($profileName, $contactNames[$remoteId], 'Address book');
+            if ((string)$collection->getLabel() === $label) {
+                continue;
+            }
+            $collection->setLabel($label);
+            $contactStore->collectionModify($collection);
+            $result['contacts']['updated']++;
         }
 
         return $result;
@@ -313,8 +401,41 @@ class DavcAdapter {
         return '/' . ltrim($path, '/');
     }
 
+    /** @param iterable<array<string, mixed>> $collections */
+    private static function remoteCollectionNames(iterable $collections): array {
+        $names = [];
+        foreach ($collections as $collection) {
+            $id = (string)($collection['id'] ?? '');
+            if ($id === '') {
+                continue;
+            }
+            $label = trim((string)($collection['label'] ?? ''));
+            // DAV Connector 1.1.x adds this UI-only marker when returning
+            // discovery results. It is not part of the remote display name.
+            if (str_starts_with($label, 'Personal - ')) {
+                $label = trim(substr($label, strlen('Personal - ')));
+            }
+            $names[$id] = $label;
+        }
+        return $names;
+    }
+
+    private static function formatCollectionLabel(string $profileName, string $remoteName, string $fallback): string {
+        $profileName = trim($profileName);
+        $remoteName = trim($remoteName);
+        if ($remoteName === '') {
+            $remoteName = $fallback;
+        }
+        $label = $profileName === '' ? $remoteName : $profileName . ': ' . $remoteName;
+
+        if (function_exists('mb_strlen') && function_exists('mb_substr')) {
+            return mb_strlen($label) > 255 ? mb_substr($label, 0, 255) : $label;
+        }
+        return strlen($label) > 255 ? substr($label, 0, 255) : $label;
+    }
+
     private function loadServices(): void {
-        if ($this->core !== null && $this->services !== null && $this->harmonization !== null) {
+        if ($this->core !== null && $this->services !== null && $this->harmonization !== null && $this->localFactory !== null) {
             return;
         }
 
@@ -324,8 +445,9 @@ class DavcAdapter {
         $coreClass = 'OCA\\DAVC\\Service\\CoreService';
         $servicesClass = 'OCA\\DAVC\\Service\\ServicesService';
         $harmonizationClass = 'OCA\\DAVC\\Service\\HarmonizationService';
+        $localFactoryClass = 'OCA\\DAVC\\Service\\Local\\LocalFactory';
 
-        foreach ([$applicationClass, $coreClass, $servicesClass, $harmonizationClass] as $class) {
+        foreach ([$applicationClass, $coreClass, $servicesClass, $harmonizationClass, $localFactoryClass] as $class) {
             if (!class_exists($class)) {
                 throw new IncompatibleDavcException('Expected DAV Connector class is missing: ' . $class);
             }
@@ -337,6 +459,7 @@ class DavcAdapter {
             $this->core = $container->get($coreClass);
             $this->services = $container->get($servicesClass);
             $this->harmonization = $container->get($harmonizationClass);
+            $this->localFactory = $container->get($localFactoryClass);
         } catch (\Throwable $e) {
             throw new IncompatibleDavcException('Unable to initialize DAV Connector internal services: ' . $e->getMessage(), 0, $e);
         }

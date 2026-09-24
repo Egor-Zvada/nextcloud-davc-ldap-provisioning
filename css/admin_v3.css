@@ -39,6 +39,10 @@
 }
 
 #davc-provisioning .davc-profile-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-right: 12px;
     border-radius: inherit;
 }
 
@@ -47,7 +51,9 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
-    width: 100%;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
     min-height: 58px;
     margin: 0;
     padding: 12px 16px;
@@ -56,6 +62,26 @@
     background: transparent;
     color: var(--color-main-text);
     text-align: left;
+}
+
+#davc-provisioning .davc-profile-header-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+}
+
+#davc-provisioning .davc-profile-sync-status {
+    max-width: 280px;
+    overflow: hidden;
+    color: var(--color-text-maxcontrast);
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#davc-provisioning .davc-profile-sync-status.error {
+    color: var(--color-error);
 }
 
 #davc-provisioning .davc-profile-toggle:hover,
@@ -242,5 +268,16 @@
 
     #davc-provisioning .davc-profile-toggle {
         align-items: flex-start;
+    }
+
+    #davc-provisioning .davc-profile-header {
+        align-items: stretch;
+        flex-direction: column;
+        padding-right: 0;
+    }
+
+    #davc-provisioning .davc-profile-header-actions {
+        justify-content: flex-end;
+        padding: 0 12px 12px;
     }
 }
