@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OCA\DAVCLdapProvisioning\Tests\Unit;
 
+use OCA\DAVCLdapProvisioning\Config\AppConfig;
 use OCA\DAVCLdapProvisioning\Config\ProfileValidator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -26,6 +27,8 @@ class ProfileValidatorTest extends TestCase {
             'port' => 443,
             'path' => '/',
             'secure_transport' => true,
+            'calendar_color_enabled' => true,
+            'calendar_color' => '#A1B2C3',
             'auto_enable_calendars' => false,
             'auto_enable_contacts' => false,
             'background_enabled' => false,
@@ -45,6 +48,18 @@ class ProfileValidatorTest extends TestCase {
         self::assertTrue($normalized['enabled']);
         self::assertTrue($normalized['auto_enable_contacts']);
         self::assertFalse($normalized['auto_enable_calendars']);
+        self::assertTrue($normalized['calendar_color_enabled']);
+        self::assertSame('#a1b2c3', $normalized['calendar_color']);
+    }
+
+    public function testExistingProfileKeepsItsCalendarColorUntilOptedIn(): void {
+        $profile = $this->validProfile();
+        unset($profile['calendar_color_enabled'], $profile['calendar_color']);
+
+        $normalized = ProfileValidator::normalize($profile);
+
+        self::assertFalse($normalized['calendar_color_enabled']);
+        self::assertSame(AppConfig::DEFAULT_CALENDAR_COLOR, $normalized['calendar_color']);
     }
 
     public function testManualCredentialsDoNotRequireLdapAttributes(): void {
@@ -83,6 +98,7 @@ class ProfileValidatorTest extends TestCase {
             'URL instead of host' => ['host', 'https://dav.example.org'],
             'port too high' => ['port', 70000],
             'relative path' => ['path', 'dav/'],
+            'invalid calendar color' => ['calendar_color', 'blue'],
         ];
     }
 

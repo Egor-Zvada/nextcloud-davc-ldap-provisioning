@@ -4,6 +4,7 @@ script('davc_ldap_provisioning', 'admin_v3');
 style('davc_ldap_provisioning', 'admin_v3');
 $config = $_['config'];
 $compat = $_['compatibility'];
+$appVersion = (string)$_['appVersion'];
 
 $renderProfile = static function (array $profile) use ($l): void {
     $usersJson = json_encode($profile['target_users'], JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE);
@@ -133,6 +134,19 @@ $renderProfile = static function (array $profile) use ($l): void {
                 </label>
             </p>
 
+            <h4><?php p($l->t('Calendar appearance')); ?></h4>
+            <p>
+                <label>
+                    <input data-field="calendar_color_enabled" type="checkbox" value="1" <?php if ($profile['calendar_color_enabled']): ?>checked<?php endif; ?>>
+                    <?php p($l->t('Use one color for all calendars in this configuration')); ?>
+                </label>
+            </p>
+            <p>
+                <label><?php p($l->t('Calendar color')); ?></label><br>
+                <input data-field="calendar_color" type="color" value="<?php p($profile['calendar_color']); ?>" <?php if (!$profile['calendar_color_enabled']): ?>disabled<?php endif; ?>>
+                <br><span class="davc-help"><?php p($l->t('Choose the color, then use Apply now. The color is changed only in Nextcloud; the remote calendar is not modified.')); ?></span>
+            </p>
+
             <h4><?php p($l->t('Automatic collection selection')); ?></h4>
             <p>
                 <label>
@@ -207,6 +221,8 @@ $renderProfile = static function (array $profile) use ($l): void {
             'port' => 443,
             'path' => '/',
             'secure_transport' => true,
+            'calendar_color_enabled' => true,
+            'calendar_color' => '#0082c9',
             'auto_enable_calendars' => false,
             'auto_enable_contacts' => false,
             'background_enabled' => false,
@@ -215,10 +231,5 @@ $renderProfile = static function (array $profile) use ($l): void {
         ?>
     </template>
 
-    <p class="davc-hint">
-        <?php p($l->t('Test a selected user from the command line before enabling its schedule:')); ?><br>
-        <code>sudo -u www-data php occ davc-ldap:provision USER --profile=PROFILE_ID --dry-run</code><br>
-        <code>sudo -u www-data php occ davc-ldap:provision USER --profile=PROFILE_ID</code>
-    </p>
-    <p class="davc-help"><?php p($l->t('Removing a configuration never deletes an already-created DAV service. Disconnect it explicitly in DAV Connector if required.')); ?></p>
+    <p class="davc-help"><?php p($l->t('Application version: %s', [$appVersion])); ?></p>
 </div>

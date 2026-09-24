@@ -29,6 +29,8 @@ language and a complete Russian translation is included.
 - Displays connected collections as `profile name: remote collection name`
   instead of DAV Connector's default `DavC:` prefix. The remote collection is
   not renamed.
+- Can assign one local Nextcloud color to all calendars connected by a profile.
+  Existing profiles keep their provider/default colors until this option is enabled.
 - Provides an **Apply now** button for each profile. It provisions an enabled
   profile or disconnects every account managed by a disabled profile.
 - Supports single-user, selected-profile, targeted-profile, dry-run, and
@@ -82,6 +84,10 @@ Nextcloud as `Ministry: Personal events`. The same rule applies to connected
 address books. This only changes DAV Connector's local collection label; the
 external DAV server is not modified and the collection remains an external,
 non-shareable DAV Connector collection.
+
+Each profile can optionally apply one selected color to all of its calendars.
+The color is stored only in DAV Connector's local collection metadata. It does
+not change the remote calendar or its color for users outside this Nextcloud.
 
 Use **Apply now** on a profile card to reconcile it immediately without waiting
 for its schedule. Saving an enabled/disabled state change also applies that
@@ -201,6 +207,14 @@ disconnect if disabled):
 sudo -u www-data php occ davc-ldap:profile:apply ministry-contacts
 ```
 
+Set or disable the local calendar color from the command line:
+
+```bash
+sudo -u www-data php occ davc-ldap:profile:set ministry-calendar \
+  --use-calendar-color=1 --calendar-color='#0082c9'
+sudo -u www-data php occ davc-ldap:profile:apply ministry-calendar
+```
+
 Test all active profiles for one user:
 
 ```bash
@@ -250,7 +264,7 @@ application rollback.
 
 ## Current limitations
 
-- Version 0.4.0 accepts only Nextcloud 34 and DAV Connector 1.1.x.
+- Version 0.4.1 accepts only Nextcloud 34 and DAV Connector 1.1.x.
 - DAV Connector internal PHP services are used because 1.1.x has no public
   provisioning API.
 - Only Basic authentication is supported; OAuth-only providers are not.

@@ -14,7 +14,7 @@ target all users or explicit users and groups, and have independent schedules.
 This compatibility-gated release supports Nextcloud 34 with
 DAV Connector 1.1.x only. Unknown DAV Connector versions fail closed.
     ]]></description>
-    <version>0.4.0</version>
+    <version>0.4.1</version>
     <namespace>DAVCLdapProvisioning</namespace>
     <licence>AGPL-3.0-or-later</licence>
     <author>Community prototype</author>

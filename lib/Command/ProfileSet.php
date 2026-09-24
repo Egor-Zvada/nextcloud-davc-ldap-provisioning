@@ -35,6 +35,8 @@ class ProfileSet extends Command {
             ->addOption('port', null, InputOption::VALUE_REQUIRED, 'DAV port')
             ->addOption('path', null, InputOption::VALUE_REQUIRED, 'DAV path')
             ->addOption('https', null, InputOption::VALUE_REQUIRED, 'Use HTTPS: 1 or 0')
+            ->addOption('use-calendar-color', null, InputOption::VALUE_REQUIRED, 'Apply one local color to all calendars: 1 or 0')
+            ->addOption('calendar-color', null, InputOption::VALUE_REQUIRED, 'Local calendar color in #RRGGBB format')
             ->addOption('enabled', null, InputOption::VALUE_REQUIRED, 'Enable profile: 1 or 0')
             ->addOption('auto-calendars', null, InputOption::VALUE_REQUIRED, 'Automatically enable all calendars: 1 or 0')
             ->addOption('auto-contacts', null, InputOption::VALUE_REQUIRED, 'Automatically enable all address books: 1 or 0')
@@ -64,6 +66,8 @@ class ProfileSet extends Command {
                 'port' => 443,
                 'path' => '/',
                 'secure_transport' => true,
+                'calendar_color_enabled' => false,
+                'calendar_color' => AppConfig::DEFAULT_CALENDAR_COLOR,
                 'auto_enable_calendars' => false,
                 'auto_enable_contacts' => false,
                 'background_enabled' => false,
@@ -79,6 +83,7 @@ class ProfileSet extends Command {
             'static-login' => 'static_login',
             'host' => 'host',
             'path' => 'path',
+            'calendar-color' => 'calendar_color',
         ];
         foreach ($stringOptions as $option => $key) {
             if ($input->getOption($option) !== null) {
@@ -101,6 +106,7 @@ class ProfileSet extends Command {
         $boolOptions = [
             'https' => 'secure_transport',
             'enabled' => 'enabled',
+            'use-calendar-color' => 'calendar_color_enabled',
             'auto-calendars' => 'auto_enable_calendars',
             'auto-contacts' => 'auto_enable_contacts',
             'all-users' => 'target_all',

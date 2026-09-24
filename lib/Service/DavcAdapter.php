@@ -235,16 +235,21 @@ class DavcAdapter {
     }
 
     /**
-     * Replace DAV Connector's `DavC:` prefix with the profile name while
-     * preserving the remote collection name. This changes only the local DAV
-     * display name exposed to Nextcloud; it never renames a remote collection.
+     * Apply local presentation settings to DAV Connector collections. This
+     * replaces the `DavC:` prefix with the profile name and can assign a
+     * calendar color. Remote collection names and colors are never changed.
      *
      * @return array{
      *     calendars:array{updated:int,total:int},
      *     contacts:array{updated:int,total:int}
      * }
      */
-    public function applyCollectionLabels(string $uid, int $sid, string $profileName): array {
+    public function applyCollectionPresentation(
+        string $uid,
+        int $sid,
+        string $profileName,
+        ?string $calendarColor = null,
+    ): array {
         $this->assertCompatible();
 
         $remote = $this->core->remoteCollectionsFetch($uid, $sid);
@@ -265,12 +270,19 @@ class DavcAdapter {
                 continue;
             }
             $label = self::formatCollectionLabel($profileName, $eventNames[$remoteId], 'Calendar');
-            if ((string)$collection->getLabel() === $label) {
-                continue;
+            $modified = false;
+            if ((string)$collection->getLabel() !== $label) {
+                $collection->setLabel($label);
+                $modified = true;
             }
-            $collection->setLabel($label);
-            $eventStore->collectionModify($collection);
-            $result['calendars']['updated']++;
+            if ($calendarColor !== null && strtolower((string)$collection->getColor()) !== $calendarColor) {
+                $collection->setColor($calendarColor);
+                $modified = true;
+            }
+            if ($modified) {
+                $eventStore->collectionModify($collection);
+                $result['calendars']['updated']++;
+            }
         }
 
         $contactStore = $this->localFactory->contactsStore();

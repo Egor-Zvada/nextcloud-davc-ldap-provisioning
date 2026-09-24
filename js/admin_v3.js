@@ -175,6 +175,10 @@
             });
         }
 
+        function updateCalendarColor(card) {
+            field(card, 'calendar_color').disabled = !field(card, 'calendar_color_enabled').checked;
+        }
+
         function principalValues(card, kind) {
             const picker = card.querySelector('.davc-principal-picker[data-kind="' + kind + '"]');
             return Array.from(picker._selected.keys());
@@ -189,6 +193,9 @@
             });
             field(card, 'target_all').addEventListener('change', function () {
                 updateTargetMode(card);
+            });
+            field(card, 'calendar_color_enabled').addEventListener('change', function () {
+                updateCalendarColor(card);
             });
             card.querySelector('.davc-profile-toggle').addEventListener('click', function () {
                 setCollapsed(card, !card.classList.contains('is-collapsed'));
@@ -213,6 +220,7 @@
             updateProfileHeading(card);
             updateCredentialSource(card);
             updateTargetMode(card);
+            updateCalendarColor(card);
             setCollapsed(card, card.classList.contains('is-collapsed'));
         }
 
@@ -235,6 +243,8 @@
             field(card, 'port').value = profile.port || 443;
             field(card, 'path').value = profile.path || '/';
             field(card, 'secure_transport').checked = profile.secure_transport !== false;
+            field(card, 'calendar_color_enabled').checked = profile.calendar_color_enabled === true;
+            field(card, 'calendar_color').value = profile.calendar_color || '#0082c9';
             field(card, 'auto_enable_calendars').checked = profile.auto_enable_calendars === true;
             field(card, 'auto_enable_contacts').checked = profile.auto_enable_contacts === true;
             field(card, 'background_enabled').checked = profile.background_enabled === true;
@@ -261,6 +271,8 @@
                 port: Number(field(card, 'port').value),
                 path: field(card, 'path').value,
                 secure_transport: field(card, 'secure_transport').checked,
+                calendar_color_enabled: field(card, 'calendar_color_enabled').checked,
+                calendar_color: field(card, 'calendar_color').value,
                 auto_enable_calendars: field(card, 'auto_enable_calendars').checked,
                 auto_enable_contacts: field(card, 'auto_enable_contacts').checked,
                 background_enabled: field(card, 'background_enabled').checked,
@@ -422,6 +434,8 @@
                 port: 443,
                 path: '/',
                 secure_transport: true,
+                calendar_color_enabled: true,
+                calendar_color: '#0082c9',
                 auto_enable_calendars: false,
                 auto_enable_contacts: false,
                 background_enabled: false,

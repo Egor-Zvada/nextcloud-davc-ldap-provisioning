@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace OCA\DAVCLdapProvisioning\Settings;
 
+use OCA\DAVCLdapProvisioning\AppInfo\Application;
 use OCA\DAVCLdapProvisioning\Config\AppConfig;
 use OCA\DAVCLdapProvisioning\Service\DavcAdapter;
+use OCP\App\IAppManager;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\IL10N;
 use OCP\Settings\ISettings;
@@ -15,6 +17,7 @@ class AdminSettings implements ISettings {
         private readonly AppConfig $config,
         private readonly DavcAdapter $davc,
         private readonly IL10N $l10n,
+        private readonly IAppManager $appManager,
     ) {
     }
 
@@ -33,6 +36,7 @@ class AdminSettings implements ISettings {
         return new TemplateResponse('davc_ldap_provisioning', 'admin_v3', [
             'config' => $this->config->all(),
             'compatibility' => $compatibility,
+            'appVersion' => $this->appManager->getAppVersion(Application::APP_ID),
         ]);
     }
 

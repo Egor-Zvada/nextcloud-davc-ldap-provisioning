@@ -21,6 +21,7 @@ class AppConfig {
     public const DEFAULT_HOST = 'caldav.yandex.ru';
     public const DEFAULT_PORT = 443;
     public const DEFAULT_PATH = '/';
+    public const DEFAULT_CALENDAR_COLOR = '#0082c9';
     public const DEFAULT_INTERVAL = 1800;
     private const PROFILE_SECRET_PREFIX = 'profile_secret_';
     private const PROFILE_LAST_RUN_PREFIX = 'profile_last_run_';
@@ -56,6 +57,8 @@ class AppConfig {
      *     port:int,
      *     path:string,
      *     secure_transport:bool,
+     *     calendar_color_enabled:bool,
+     *     calendar_color:string,
      *     auto_enable_calendars:bool,
      *     auto_enable_contacts:bool,
      *     background_enabled:bool,
@@ -280,6 +283,9 @@ class AppConfig {
             'port' => max(1, min(65535, (int)$this->get('port', (string)self::DEFAULT_PORT))),
             'path' => $path,
             'secure_transport' => $this->getBool('secure_transport', true),
+            // Preserve provider/default colors until an administrator opts in.
+            'calendar_color_enabled' => false,
+            'calendar_color' => self::DEFAULT_CALENDAR_COLOR,
             'auto_enable_calendars' => $this->getBool('auto_enable_calendars', true),
             'auto_enable_contacts' => false,
             // The old global switch is deliberately not migrated to avoid a mass run.

@@ -4,6 +4,7 @@ script('davc_ldap_provisioning', 'admin');
 style('davc_ldap_provisioning', 'admin');
 $config = $_['config'];
 $compat = $_['compatibility'];
+$appVersion = (string)$_['appVersion'];
 
 $renderProfile = static function (array $profile) use ($l): void {
     ?>
@@ -138,13 +139,5 @@ $renderProfile = static function (array $profile) use ($l): void {
         ?>
     </template>
 
-    <p class="davc-ldap-hint">
-        <?php p($l->t('Test from the command line before enabling background provisioning:')); ?><br>
-        <code>sudo -u www-data php occ davc-ldap:profile:list</code><br>
-        <code>sudo -u www-data php occ davc-ldap:provision USER --profile=PROFILE_ID --dry-run</code><br>
-        <code>sudo -u www-data php occ davc-ldap:provision USER --profile=PROFILE_ID</code>
-    </p>
-    <p class="davc-ldap-help">
-        <?php p($l->t('Removing a configuration never deletes an already-created DAV service. Disconnect it explicitly in DAV Connector if required.')); ?>
-    </p>
+    <p class="davc-ldap-help"><?php p($l->t('Application version: %s', [$appVersion])); ?></p>
 </div>

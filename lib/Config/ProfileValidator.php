@@ -29,6 +29,8 @@ final class ProfileValidator {
      *     port:int,
      *     path:string,
      *     secure_transport:bool,
+     *     calendar_color_enabled:bool,
+     *     calendar_color:string,
      *     auto_enable_calendars:bool,
      *     auto_enable_contacts:bool,
      *     background_enabled:bool,
@@ -97,6 +99,12 @@ final class ProfileValidator {
             throw new \InvalidArgumentException('DAV path must start with /');
         }
 
+        $calendarColorEnabled = self::toBool($profile['calendar_color_enabled'] ?? false);
+        $calendarColor = strtolower(trim((string)($profile['calendar_color'] ?? AppConfig::DEFAULT_CALENDAR_COLOR)));
+        if (preg_match('/^#[0-9a-f]{6}$/D', $calendarColor) !== 1) {
+            throw new \InvalidArgumentException('Calendar color must use #RRGGBB format');
+        }
+
         $backgroundEnabled = self::toBool($profile['background_enabled'] ?? false);
         $backgroundInterval = (int)($profile['background_interval'] ?? AppConfig::DEFAULT_INTERVAL);
         if ($backgroundInterval < self::MIN_INTERVAL || $backgroundInterval > self::MAX_INTERVAL) {
@@ -121,6 +129,8 @@ final class ProfileValidator {
             'port' => $port,
             'path' => $path,
             'secure_transport' => self::toBool($profile['secure_transport'] ?? true),
+            'calendar_color_enabled' => $calendarColorEnabled,
+            'calendar_color' => $calendarColor,
             'auto_enable_calendars' => self::toBool($profile['auto_enable_calendars'] ?? false),
             'auto_enable_contacts' => self::toBool($profile['auto_enable_contacts'] ?? false),
             'background_enabled' => $backgroundEnabled,

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1
+
+- Replace the obsolete command-line and configuration-removal notes at the bottom of the administration page with the installed application version.
+- Add an optional color picker to each profile and apply its selected color to all locally connected calendars without changing the remote provider.
+
 ## 0.4.0
 
 - Replace DAV Connector's `DavC:` collection prefix with the profile name while preserving the remote calendar or address-book name.

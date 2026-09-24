@@ -180,10 +180,11 @@ class Provisioner {
         // Collection display names are cosmetic. A naming failure must not
         // roll back an otherwise healthy external DAV connection.
         try {
-            $labelResult = $this->davc->applyCollectionLabels(
+            $labelResult = $this->davc->applyCollectionPresentation(
                 $uid,
                 (int)$service['sid'],
                 $profileName,
+                (bool)$profile['calendar_color_enabled'] ? (string)$profile['calendar_color'] : null,
             );
         } catch (\Throwable $e) {
             $this->logger->warning('DAV collections were connected but their display names could not be updated', [
@@ -195,7 +196,7 @@ class Provisioner {
         }
 
         $message = sprintf(
-            'DAV service %s (sid=%d), calendars enabled=%d/%d renamed=%d, contacts enabled=%d/%d renamed=%d',
+            'DAV service %s (sid=%d), calendars enabled=%d/%d appearance_updated=%d, contacts enabled=%d/%d renamed=%d',
             $service['action'],
             $service['sid'],
             $collectionResult['calendars']['enabled'],
