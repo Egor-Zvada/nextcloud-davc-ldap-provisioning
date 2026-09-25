@@ -1,6 +1,6 @@
 # DAVC Provisioning
 
-Companion app for **Nextcloud 34** and **DAV Connector 1.1.x**. It provisions
+Companion app for **Nextcloud 34–35** and **DAV Connector 1.1.x**. It provisions
 multiple Basic-auth DAV accounts from LDAP attributes or encrypted manual
 credentials without modifying the official `integration_davc` app.
 
@@ -264,7 +264,7 @@ application rollback.
 
 ## Current limitations
 
-- Version 0.4.1 accepts only Nextcloud 34 and DAV Connector 1.1.x.
+- Version 0.5.0 accepts Nextcloud 34 and 35 with DAV Connector 1.1.x.
 - DAV Connector internal PHP services are used because 1.1.x has no public
   provisioning API.
 - Only Basic authentication is supported; OAuth-only providers are not.

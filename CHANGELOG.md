@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0
+
+- Add declared support for Nextcloud 35 while retaining Nextcloud 34 compatibility.
+- Verify application bootstrap, command registration, DAV Connector 1.1.x service resolution, and the status command on an isolated Nextcloud 35 installation.
+- Keep the PHP compatibility range at 8.2–8.5 and the fail-closed DAV Connector 1.1.x version guard.
+
 ## 0.4.1
 
 - Replace the obsolete command-line and configuration-removal notes at the bottom of the administration page with the installed application version.
